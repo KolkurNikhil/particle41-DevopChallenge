@@ -99,12 +99,3 @@ variable "container_image" {
   type        = string
   default     = "knikhil999/simpletimeservice:latest"  # Set YOUR image as default
 }
-variable "environment" {
-  description = "Deployment environment"
-  type        = string
-
-  validation {
-    condition     = can(regex("^dev|stage|prod$", var.environment))
-    error_message = "Must be 'dev', 'stage', or 'prod'."
-  }
-}

@@ -1,72 +1,68 @@
 
-# Check for existing execution role
+locals {
+  execution_role_name = "${var.project_name}-ecsTaskExecutionRole"
+  task_role_name      = "${var.project_name}-ecsTaskRole"
+}
+
+# Only try to find existing roles if explicitly requested
 data "aws_iam_role" "existing_execution_role" {
   count = var.use_existing_roles ? 1 : 0
-  name  = "${var.project_name}-ecsTaskExecutionRole"
-
-  lifecycle {
-    postcondition {
-      condition     = var.use_existing_roles ? self.arn != null : true
-      error_message = "ECS Task Execution Role '${var.project_name}-ecsTaskExecutionRole' not found when use_existing_roles=true"
-    }
-  }
+  name  = local.execution_role_name
 }
 
-# Check for existing task role
 data "aws_iam_role" "existing_task_role" {
   count = var.use_existing_roles ? 1 : 0
-  name  = "${var.project_name}-ecsTaskRole"
-
-  lifecycle {
-    postcondition {
-      condition     = var.use_existing_roles ? self.arn != null : true
-      error_message = "ECS Task Role '${var.project_name}-ecsTaskRole' not found when use_existing_roles=true"
-    }
-  }
+  name  = local.task_role_name
 }
 
-# Create execution role only if not using existing one
+# Create roles unless using existing ones
 resource "aws_iam_role" "ecs_task_execution_role" {
   count = var.use_existing_roles ? 0 : 1
-  name  = "${var.project_name}-ecsTaskExecutionRole"
+  name  = local.execution_role_name
+  path  = "/${var.project_name}/"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "ecs-tasks.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
+      Effect    = "Allow",
+      Principal = { Service = "ecs-tasks.amazonaws.com" },
+      Action    = "sts:AssumeRole"
     }]
   })
+
+  tags = {
+    ManagedBy = "Terraform"
+  }
 }
 
-# Attach policy to either existing or new execution role
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = var.use_existing_roles ? data.aws_iam_role.existing_execution_role[0].name : aws_iam_role.ecs_task_execution_role[0].name
+resource "aws_iam_role" "ecs_task_role" {
+  count = var.use_existing_roles ? 0 : 1
+  name  = local.task_role_name
+  path  = "/${var.project_name}/"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "ecs-tasks.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    ManagedBy = "Terraform"
+  }
+}
+
+# Policy attachments
+resource "aws_iam_role_policy_attachment" "execution_policy" {
+  count = var.use_existing_roles ? 0 : 1
+  role  = aws_iam_role.ecs_task_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Create task role only if not using existing one
-resource "aws_iam_role" "ecs_task_role" {
+resource "aws_iam_role_policy_attachment" "task_policy" {
   count = var.use_existing_roles ? 0 : 1
-  name  = "${var.project_name}-ecsTaskRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "ecs-tasks.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
-  })
-}
-
-# Attach policy to either existing or new task role
-resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
-  role       = var.use_existing_roles ? data.aws_iam_role.existing_task_role[0].name : aws_iam_role.ecs_task_role[0].name
+  role  = aws_iam_role.ecs_task_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonECS_FullAccess"
 }

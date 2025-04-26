@@ -26,6 +26,7 @@ module "vpc" {
 module "roles" {
   source       = "./modules/roles"
   project_name = "webapp"
+  region       = "ap-south-1"
 }
 module "ecs" {
   source             = "./modules/ecs"

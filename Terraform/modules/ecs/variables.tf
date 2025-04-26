@@ -4,6 +4,12 @@ variable "cluster_name" {
   default     = "webapp-cluster"
 }
 
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default     = "ap-south-1"
+}
+
 variable "task_family" {
   description = "Family name for the ECS task definition"
   type        = string
@@ -26,6 +32,7 @@ variable "execution_role_arn" {
   description = "ARN of the task execution role"
   type        = string
 }
+
 variable "vpc_id" {
   description = "The ID of the VPC to associate with the target group"
   type        = string
@@ -45,7 +52,7 @@ variable "container_name" {
 variable "container_image" {
   description = "Docker image for the container"
   type        = string
-  default     = "nginx:latest"
+  default     = "nginx:latest" # Will be overridden by ECR URL
 }
 
 variable "container_port" {
@@ -54,10 +61,11 @@ variable "container_port" {
   default     = 80
 }
 
+
 variable "service_name" {
   description = "Name of the ECS service"
   type        = string
-  default     = "webapp-service"
+  default     = "simpletimeservice" # Changed from webapp-service
 }
 
 variable "desired_count" {
@@ -80,6 +88,7 @@ variable "target_group_arn" {
   description = "ARN of the target group for the load balancer"
   type        = string
 }
+
 variable "container_environment" {
   description = "Environment variables for the ECS container"
   type        = list(object({

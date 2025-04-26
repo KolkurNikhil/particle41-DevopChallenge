@@ -1,7 +1,24 @@
+resource "aws_ecr_repository" "webapp" {
+  name                 = "webapp-${var.service_name}"
+  image_tag_mutability = "MUTABLE"
 
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  # Prevent accidental deletion (comment this out if you want Terraform to manage deletion)
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
+}
 
 resource "aws_ecs_cluster" "webapp_cluster" {
   name = var.cluster_name
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 resource "aws_ecs_task_definition" "webapp_task" {
@@ -14,15 +31,35 @@ resource "aws_ecs_task_definition" "webapp_task" {
   task_role_arn            = var.task_role_arn
 
   container_definitions = jsonencode([{
-    name      = var.container_name
-    image     = var.container_image
-    essential = true
+    name         = var.container_name
+    image        = "${aws_ecr_repository.webapp.repository_url}:latest"
+    essential    = true
+    startTimeout = 300
     portMappings = [{
       containerPort = var.container_port
       hostPort      = var.container_port
       protocol      = "tcp"
     }]
     environment = var.container_environment
+    
+    # Minimal logging (systemd driver doesn't require CloudWatch)
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-create-group" = "true"
+        "awslogs-region"      = var.region
+        "awslogs-group"       = "/ecs/${var.task_family}"
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+    
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl -f http://localhost:${var.container_port} || exit 1"]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
   }])
 }
 
@@ -44,4 +81,11 @@ resource "aws_ecs_service" "webapp_service" {
     container_name   = var.container_name
     container_port   = var.container_port
   }
+
+  depends_on = [aws_ecr_repository.webapp]
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_access" {
+  role       = split("/", var.execution_role_arn)[length(split("/", var.execution_role_arn))-1]
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }

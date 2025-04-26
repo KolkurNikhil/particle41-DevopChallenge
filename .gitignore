@@ -1,0 +1,23 @@
+form files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+terraform.auto.tfvars
+
+# Local IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Sensitive files
+*.env
+*.pem
+*.key
+*.cert

@@ -23,14 +23,11 @@ variable "environment" {
 }
 
 variable "app_port" {
-  description = "Application port number"
+  description = "Port exposed by the Docker image"
   type        = number
-
-  validation {
-    condition     = var.app_port > 0 && var.app_port <= 65535
-    error_message = "Port must be between 1 and 65535."
-  }
+  default     = 5000  # Make sure this matches
 }
+
 variable "vpc_cidr" {
   type        = string
   description = "VPC CIDR block"

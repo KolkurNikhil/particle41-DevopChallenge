@@ -1,0 +1,31 @@
+version: 0.2
+
+env:
+  variables:
+    IMAGE_NAME: "webapp"
+    DOCKERFILE_DIR: "APP"  # change to "terraform" if your Dockerfile is in terraform folder
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+      - REPO_URI="${ACCOUNT_ID}.dkr.ecr.$AWS_REGION.amazonaws.com/${IMAGE_NAME}"
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPO_URI
+      - echo Account ID: $ACCOUNT_ID
+      - echo Repo URI: $REPO_URI
+
+  build:
+    commands:
+      - echo Building Docker image...
+      - docker build -t $REPO_URI ./$DOCKERFILE_DIR
+      - docker tag $REPO_URI:latest $REPO_URI:latest
+
+  post_build:
+    commands:
+      - echo Pushing Docker image to ECR...
+      - docker push $REPO_URI:latest
+      - echo Build completed on `date`
+
+artifacts:
+  files: []

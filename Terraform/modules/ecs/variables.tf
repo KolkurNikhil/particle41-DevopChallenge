@@ -15,6 +15,12 @@ variable "task_family" {
   type        = string
   default     = "webapp-task-def"
 }
+# variables.tf
+variable "ecr_repository_exists" {
+  description = "Set to true if repository already exists"
+  type        = bool
+  default     = true # Default to safe mode
+}
 
 variable "cpu" {
   description = "CPU units for the task"
@@ -52,13 +58,14 @@ variable "container_name" {
 variable "container_image" {
   description = "Docker image for the container"
   type        = string
-  default     = "nginx:latest" # Will be overridden by ECR URL
+  default     = "aws_account_id.dkr.ecr.region.amazonaws.com/repository_name:latest"
 }
+
 
 variable "container_port" {
   description = "Port on which the container listens"
   type        = number
-  default     = 80
+  default     = 5000
 }
 
 
@@ -79,10 +86,7 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "security_group_ids" {
-  description = "List of security group IDs for the service"
-  type        = list(string)
-}
+
 
 variable "target_group_arn" {
   description = "ARN of the target group for the load balancer"
@@ -96,4 +100,29 @@ variable "container_environment" {
     value = string
   }))
   default     = []
+}
+
+variable "use_existing_ecr" {
+  description = "Set to true to use existing ECR repository"
+  type        = bool
+  default     = false
+}
+
+variable "ecr_repository_name" {
+  description = "Custom ECR repository name (defaults to webapp-<service_name>)"
+  type        = string
+  default     = null
+}
+
+variable "image_tag" {
+  description = "Docker image tag to deploy"
+  type        = string
+  default     = "latest"
+}
+variable "execution_role_name" {
+  description = "Name of the ECS Task Execution Role"
+  type        = string
+}
+variable "security_group_ids" {
+  type = list(string)
 }
